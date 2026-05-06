@@ -602,13 +602,63 @@ body.sidebar-collapsed #toggle-btn {
 
 /* ── PRINT ───────────────────────────────────────────── */
 @media print {
-  body { overflow: auto; height: auto; background: white; }
-  #sidebar { display: none; }
-  #toggle-btn { display: none; }
-  #main-area { height: auto; overflow: visible; }
-  #slide-container { height: auto; overflow: visible; }
-  #slide-footer { display: none; }
-  .slide { display: flex !important; position: relative; page-break-after: always; height: 100vh; }
+  /* Reset html/body — drop fixed positioning and viewport locks.
+     The screen layout uses position:fixed on body with height:100vh
+     and overflow:hidden, which causes Safari to print one blank page. */
+  html {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  body {
+    position: static !important;
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    width: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  /* Hide non-print chrome */
+  #sidebar,
+  #toggle-btn,
+  #slide-footer { display: none !important; }
+
+  /* Drop flex constraints on layout containers so they can grow with content */
+  #main-area,
+  #slide-container {
+    display: block !important;
+    position: static !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    flex: none !important;
+  }
+
+  /* Reveal every slide, stack them naturally, one per printed page */
+  .slide {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    page-break-after: always;
+    break-after: page;
+    page-break-inside: avoid;
+  }
+
+  /* No trailing blank page after the final slide */
+  .slide:last-of-type {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  /* slide-inner uses min-height:100% on screen, which collapses to 0
+     once the parent .slide is height:auto. Reset it. */
+  .slide-inner {
+    min-height: 0 !important;
+  }
 }
 </style>
 </head>
