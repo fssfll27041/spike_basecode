@@ -187,6 +187,32 @@
   .col { padding: 28px 48px; }
   .col + .col { border-left: 1px solid var(--gray-line); }
 
+  /* ── PRINT ──
+     The two-column grid above slices horizontally when printed, so steps
+     interleave (left rows 1-3, right rows 1-3, then left 4-6, right 4-6...).
+     For print, stack the columns so left prints fully first, then right.
+     Page-break between them gives a clean visual separation of the two
+     logical phase groups. */
+  @media print {
+    main {
+      display: block !important;
+    }
+    .col {
+      width: 100% !important;
+      padding: 20px 36px;
+    }
+    .col + .col {
+      border-left: none !important;
+      page-break-before: always;
+      break-before: page;
+    }
+    /* Don't let a single step split across pages */
+    .step {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+  }
+
   .col-heading {
     font-family: 'DM Mono', monospace;
     font-size: 10px;
