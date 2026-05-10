@@ -19,7 +19,7 @@
       7. Creates the team's repo folder, app shortcuts, and team shortcuts on the desktop
 
     What it does NOT do (these are interactive, do them manually after):
-      - Sign in to Chrome with the team Gmail
+      - Sign in to Chrome with the team email
       - Set up GitHub authentication (HTTPS credential manager or SSH key)
       - Clone the team's spike_basecode fork
       - Install the Pybricks firmware on the SPIKE Prime hub
@@ -45,13 +45,15 @@ param(
     [string]$TeamNumber
 )
 
-# Known chapter teams. Add a TeamName here if/when teams adopt one.
+# Known chapter teams. Each entry has a team name (or $null if unnamed) and
+# the team's current email address. Email may be @outlook.com or @gmail.com
+# depending on what we were able to provision; update here when emails change.
 $KnownTeams = @{
-    "27041" = "Thought Process"
-    "62070" = $null
-    "18300" = $null
-    "19991" = $null
-    "27042" = $null
+    "18300" = @{ Name = $null;             Email = "fss.fll.18300@outlook.com" }
+    "19991" = @{ Name = $null;             Email = "fss.fll.19991@outlook.com" }
+    "27041" = @{ Name = "Thought Process"; Email = "fss.fll.27041@gmail.com"   }
+    "27042" = @{ Name = $null;             Email = "fss.fll.27042@gmail.com"   }
+    "62070" = @{ Name = $null;             Email = "fss.fll.62070@outlook.com" }
 }
 
 # If no team number was passed, show the menu and prompt
@@ -59,7 +61,7 @@ if (-not $TeamNumber) {
     Write-Host ""
     Write-Host "Bolton Robotics FLL — known teams:" -ForegroundColor Cyan
     foreach ($t in $KnownTeams.Keys | Sort-Object) {
-        $label = if ($KnownTeams[$t]) { $KnownTeams[$t] } else { "(unnamed)" }
+        $label = if ($KnownTeams[$t].Name) { $KnownTeams[$t].Name } else { "(unnamed)" }
         Write-Host "  $t  $label"
     }
     Write-Host ""
@@ -73,17 +75,17 @@ if (-not $KnownTeams.ContainsKey($TeamNumber)) {
 }
 
 # Resolve team name (use known name if set, otherwise default to chapter convention)
-$TeamName = if ($KnownTeams[$TeamNumber]) {
-    $KnownTeams[$TeamNumber]
+$TeamName = if ($KnownTeams[$TeamNumber].Name) {
+    $KnownTeams[$TeamNumber].Name
 } else {
     "Bolton Robotics Team $TeamNumber"
 }
 
 # Derived team-specific values
-$TeamGmail     = "fss.fll.$TeamNumber@gmail.com"
+$TeamEmail     = $KnownTeams[$TeamNumber].Email          # @gmail.com or @outlook.com per team
 $GitUserName   = "Bolton Robotics FLL Team $TeamNumber"  # Shows up in commit history
-$GitUserEmail  = $TeamGmail                              # Same as Gmail by default
-$GitHubUser    = "fssfll$TeamNumber"                     # Team's GitHub username
+$GitUserEmail  = $TeamEmail                              # Same as the team email
+$GitHubUser    = "fssfll$TeamNumber"                     # Team's GitHub username (convention)
 $ForkUrl       = "https://github.com/$GitHubUser/spike_basecode.git"
 $UpstreamUrl   = "https://github.com/stevenerat/spike_basecode.git"
 
@@ -499,6 +501,9 @@ GUI ALTERNATIVE:
 QUESTIONS?
   Talk to your coach, or contact Steve.
 
+YOUR TEAM'S EMAIL:
+  $TeamEmail
+
 YOUR TEAM'S GITHUB:
   https://github.com/$GitHubUser/spike_basecode
 
@@ -520,7 +525,7 @@ Write-Host " Setup complete for Team $TeamNumber" -ForegroundColor Cyan
 Write-Host "===============================================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "REMAINING MANUAL STEPS:" -ForegroundColor Yellow
-Write-Host "  1. Open Chrome, sign in with $TeamGmail"
+Write-Host "  1. Open Chrome, sign in with $TeamEmail"
 Write-Host "  2. Set Chrome as default browser (Settings > Apps > Default apps)"
 Write-Host "  3. Open Git Bash, run: git clone $ForkUrl `"$RepoPath`""
 Write-Host "     (You'll be prompted to authenticate with GitHub via browser)"
