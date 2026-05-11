@@ -247,7 +247,7 @@ $vscodeExtensions = @(
 
 foreach ($ext in $vscodeExtensions) {
     Write-Host "  Installing extension: $ext" -ForegroundColor Gray
-    code --install-extension $ext --force | Out-Null
+    code --install-extension $ext --force 
 }
 
 # Configure VS Code user settings - make Git Bash the default terminal
@@ -255,7 +255,7 @@ $vscodeSettingsDir  = "$env:APPDATA\Code\User"
 $vscodeSettingsPath = "$vscodeSettingsDir\settings.json"
 
 if (-not (Test-Path $vscodeSettingsDir)) {
-    New-Item -ItemType Directory -Path $vscodeSettingsDir -Force | Out-Null
+    New-Item -ItemType Directory -Path $vscodeSettingsDir -Force 
 }
 
 $vscodeSettings = @{
@@ -323,7 +323,7 @@ foreach ($key in $suggestedKeys) {
 
 # Disable web search results in Start menu
 $searchPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search"
-if (-not (Test-Path $searchPath)) { New-Item -Path $searchPath -Force | Out-Null }
+if (-not (Test-Path $searchPath)) { New-Item -Path $searchPath -Force }
 Set-ItemProperty -Path $searchPath -Name "BingSearchEnabled" -Value 0 -Type DWord -Force
 Set-ItemProperty -Path $searchPath -Name "CortanaConsent"    -Value 0 -Type DWord -Force
 
@@ -333,7 +333,7 @@ Set-ItemProperty -Path $contentDeliveryPath -Name "RotatingLockScreenOverlayEnab
 
 # Disable OneDrive auto-sync prompts (does not uninstall OneDrive, just stops the nagging)
 $oneDrivePath = "HKCU:\Software\Microsoft\OneDrive"
-if (-not (Test-Path $oneDrivePath)) { New-Item -Path $oneDrivePath -Force | Out-Null }
+if (-not (Test-Path $oneDrivePath)) { New-Item -Path $oneDrivePath -Force }
 Set-ItemProperty -Path $oneDrivePath -Name "DisablePersonalSync" -Value 1 -Type DWord -Force
 
 Write-Host "  Windows quieted." -ForegroundColor Green
@@ -352,7 +352,7 @@ powercfg /change disk-timeout-ac    0      # Never spin down disk on AC
 
 # Set Windows Update active hours: 8 AM to 8 PM (covers all reasonable meeting times)
 $wuPath = "HKLM:\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings"
-if (-not (Test-Path $wuPath)) { New-Item -Path $wuPath -Force | Out-Null }
+if (-not (Test-Path $wuPath)) { New-Item -Path $wuPath -Force }
 Set-ItemProperty -Path $wuPath -Name "ActiveHoursStart" -Value 8  -Type DWord -Force
 Set-ItemProperty -Path $wuPath -Name "ActiveHoursEnd"   -Value 20 -Type DWord -Force
 
@@ -367,7 +367,7 @@ Write-Host "[7/7] Creating repo folder and desktop shortcuts..." -ForegroundColo
 
 # Create repo parent folder
 if (-not (Test-Path $ReposRoot)) {
-    New-Item -ItemType Directory -Path $ReposRoot -Force | Out-Null
+    New-Item -ItemType Directory -Path $ReposRoot -Force 
 }
 
 # Helper function to create .lnk shortcuts
