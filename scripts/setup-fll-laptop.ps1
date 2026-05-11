@@ -16,12 +16,14 @@
       4. Sets Chrome as default browser, unpins Edge from taskbar
       5. Quiets Windows notifications, disables suggested content / ads
       6. Configures power plan, Windows Update active hours
-      7. Creates the team's repo folder, app shortcuts, and team shortcuts on the desktop
+      7. Creates team shortcuts, a desktop README, and a per-team helper script
+         (finalize-team-N.ps1) that clones the repo and sets the upstream remote
 
     What it does NOT do (these are interactive, do them manually after):
       - Sign in to Chrome with the team email
       - Set up GitHub authentication (HTTPS credential manager or SSH key)
-      - Clone the team's spike_basecode fork
+      - Run the finalize-team-N.ps1 helper to clone the repo and set upstream
+        (this is interactive because it triggers the browser-based GitHub login)
       - Install the Pybricks firmware on the SPIKE Prime hub
       - Pin shortcuts to the taskbar (Microsoft removed scripted pinning;
         right-click each desktop shortcut and choose "Pin to taskbar")
@@ -247,7 +249,7 @@ $vscodeExtensions = @(
 
 foreach ($ext in $vscodeExtensions) {
     Write-Host "  Installing extension: $ext" -ForegroundColor Gray
-    code --install-extension $ext --force 
+    code --install-extension $ext --force
 }
 
 # Configure VS Code user settings - make Git Bash the default terminal
@@ -255,7 +257,7 @@ $vscodeSettingsDir  = "$env:APPDATA\Code\User"
 $vscodeSettingsPath = "$vscodeSettingsDir\settings.json"
 
 if (-not (Test-Path $vscodeSettingsDir)) {
-    New-Item -ItemType Directory -Path $vscodeSettingsDir -Force 
+    New-Item -ItemType Directory -Path $vscodeSettingsDir -Force
 }
 
 $vscodeSettings = @{
@@ -367,7 +369,7 @@ Write-Host "[7/7] Creating repo folder and desktop shortcuts..." -ForegroundColo
 
 # Create repo parent folder
 if (-not (Test-Path $ReposRoot)) {
-    New-Item -ItemType Directory -Path $ReposRoot -Force 
+    New-Item -ItemType Directory -Path $ReposRoot -Force
 }
 
 # Helper function to create .lnk shortcuts
@@ -389,46 +391,17 @@ function New-Shortcut {
 }
 
 # -----------------------------------------------------------------------------
-# General app shortcuts (not team-specific)
+# Generic OS shortcuts (no installer creates these)
 # -----------------------------------------------------------------------------
+# Chrome, GitHub Desktop, and VS Code are intentionally NOT created here -
+# their installers already create desktop shortcuts. The team-specific
+# "Open Team N Code" shortcut below replaces the need for a generic VS Code
+# shortcut.
 
-# Chrome - try standard Program Files location, fall back to (x86)
-$chromeExe = "${env:ProgramFiles}\Google\Chrome\Application\chrome.exe"
-if (-not (Test-Path $chromeExe)) {
-    $chromeExe = "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe"
-}
-if (Test-Path $chromeExe) {
-    New-Shortcut -Path "$DesktopPath\Google Chrome.lnk" -Target $chromeExe
-    Write-Host "  Created shortcut: Google Chrome" -ForegroundColor Gray
-} else {
-    Write-Warning "  Chrome executable not found; skipping Chrome shortcut."
-}
-
-# GitHub Desktop - installs per-user under LOCALAPPDATA
-$githubDesktopExe = "$env:LOCALAPPDATA\GitHubDesktop\GitHubDesktop.exe"
-if (-not (Test-Path $githubDesktopExe)) {
-    # Versioned subdirectory fallback (some installer versions)
-    $candidate = Get-ChildItem "$env:LOCALAPPDATA\GitHubDesktop" -Filter "GitHubDesktop.exe" `
-                    -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($candidate) { $githubDesktopExe = $candidate.FullName }
-}
-if (Test-Path $githubDesktopExe) {
-    New-Shortcut -Path "$DesktopPath\GitHub Desktop.lnk" -Target $githubDesktopExe
-    Write-Host "  Created shortcut: GitHub Desktop" -ForegroundColor Gray
-} else {
-    Write-Warning "  GitHub Desktop executable not found; skipping shortcut."
-}
-
-# VS Code - try user install first, then system install
+# Locate VS Code for the team-specific shortcut below (user install, then system install)
 $vscodeExe = "$env:LOCALAPPDATA\Programs\Microsoft VS Code\Code.exe"
 if (-not (Test-Path $vscodeExe)) {
     $vscodeExe = "${env:ProgramFiles}\Microsoft VS Code\Code.exe"
-}
-if (Test-Path $vscodeExe) {
-    New-Shortcut -Path "$DesktopPath\Visual Studio Code.lnk" -Target $vscodeExe
-    Write-Host "  Created shortcut: Visual Studio Code" -ForegroundColor Gray
-} else {
-    Write-Warning "  VS Code executable not found; skipping general VS Code shortcut."
 }
 
 # File Explorer - built-in, always present
@@ -469,6 +442,72 @@ if (Test-Path $gitBashExe) {
         -Arguments "--cd=`"$RepoPath`""
     Write-Host "  Created shortcut: Git Bash (Team $TeamNumber)" -ForegroundColor Gray
 }
+
+# -----------------------------------------------------------------------------
+# Helper script: finalize-team-N.ps1
+# -----------------------------------------------------------------------------
+# Writes a separate, per-team script to the desktop that performs the post-setup
+# git work (clone, set upstream). Avoids copy/paste errors from the PowerShell
+# console. Safe to re-run.
+
+$finalizeScriptName = "finalize-team-$TeamNumber.ps1"
+$finalizeScriptPath = "$DesktopPath\$finalizeScriptName"
+
+# In the here-string below:
+#   $RepoPath / $ForkUrl / $UpstreamUrl  expand NOW (bake values into the file)
+#   `$Variable                            stays literal (runs in the generated script)
+$finalizeScript = @"
+# $finalizeScriptName
+# Auto-generated by setup-fll-laptop.ps1 on $(Get-Date -Format 'yyyy-MM-dd HH:mm')
+# Clones the team's spike_basecode fork and configures the upstream remote.
+# Idempotent: safe to re-run.
+
+`$RepoPath    = '$RepoPath'
+`$ForkUrl     = '$ForkUrl'
+`$UpstreamUrl = '$UpstreamUrl'
+
+Write-Host ''
+Write-Host '===============================================================' -ForegroundColor Cyan
+Write-Host ' Team $TeamNumber - clone repo and configure remotes' -ForegroundColor Cyan
+Write-Host '===============================================================' -ForegroundColor Cyan
+Write-Host ''
+
+# Step 1: Clone if not already present
+if (-not (Test-Path "`$RepoPath\.git")) {
+    Write-Host 'Cloning team fork from GitHub...' -ForegroundColor Yellow
+    Write-Host 'If prompted, complete the GitHub login flow in your browser.' -ForegroundColor Cyan
+    git clone `$ForkUrl `$RepoPath
+    if (`$LASTEXITCODE -ne 0) {
+        Write-Error 'Clone failed. Resolve the issue and re-run this script.'
+        exit 1
+    }
+} else {
+    Write-Host "Repo already cloned at `$RepoPath" -ForegroundColor Green
+}
+
+# Step 2: cd to repo so subsequent git commands have the right context
+Set-Location `$RepoPath
+
+# Step 3: Add upstream remote if not already configured
+`$existingUpstream = git remote get-url upstream 2>`$null
+if (`$existingUpstream) {
+    Write-Host "Upstream remote already configured: `$existingUpstream" -ForegroundColor Green
+} else {
+    Write-Host 'Adding upstream remote...' -ForegroundColor Yellow
+    git remote add upstream `$UpstreamUrl
+    Write-Host "Upstream remote added: `$UpstreamUrl" -ForegroundColor Green
+}
+
+# Step 4: Verify
+Write-Host ''
+Write-Host 'Configured remotes:' -ForegroundColor Cyan
+git remote -v
+Write-Host ''
+Write-Host 'Done. Open the repo in VS Code via the desktop shortcut.' -ForegroundColor Green
+"@
+
+Set-Content -Path $finalizeScriptPath -Value $finalizeScript -Encoding UTF8
+Write-Host "  Created helper script: $finalizeScriptName" -ForegroundColor Gray
 
 # -----------------------------------------------------------------------------
 # Desktop README
@@ -526,16 +565,16 @@ Write-Host "===============================================================" -Fo
 Write-Host ""
 Write-Host "REMAINING MANUAL STEPS:" -ForegroundColor Yellow
 Write-Host "  1. Open Chrome, sign in with $TeamEmail"
+Write-Host "     (Skip sign-in for outlook.com accounts - Chrome requires a Google account)"
 Write-Host "  2. Set Chrome as default browser (Settings > Apps > Default apps)"
-Write-Host "  3. Open Git Bash, run: git clone $ForkUrl `"$RepoPath`""
+Write-Host "  3. Run the finalize script from the desktop to clone the repo"
+Write-Host "     and set up the upstream remote:"
+Write-Host "       & `"$finalizeScriptPath`""
 Write-Host "     (You'll be prompted to authenticate with GitHub via browser)"
-Write-Host "  4. Add upstream remote:"
-Write-Host "     cd `"$RepoPath`""
-Write-Host "     git remote add upstream $UpstreamUrl"
-Write-Host "  5. Sign in to GitHub Desktop with the team's GitHub account"
-Write-Host "  6. Pin shortcuts to taskbar: right-click each desktop shortcut"
+Write-Host "  4. Sign in to GitHub Desktop with the team's GitHub account"
+Write-Host "  5. Pin shortcuts to taskbar: right-click each desktop shortcut"
 Write-Host "     and choose `"Pin to taskbar`""
-Write-Host "  7. Verify: open the repo in VS Code via the desktop shortcut,"
+Write-Host "  6. Verify: open the repo in VS Code via the desktop shortcut,"
 Write-Host "     run a test commit/push, and connect to a SPIKE hub."
 Write-Host ""
 Write-Host "If anything went wrong, the script is safe to re-run." -ForegroundColor Gray
