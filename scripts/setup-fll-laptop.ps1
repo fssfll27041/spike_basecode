@@ -10,23 +10,30 @@
     to see the team menu and be prompted.
 
     The script:
-      1. Installs core software (Git, Python, VS Code, Chrome, GitHub Desktop) via winget
-      2. Writes a chapter-standard .gitconfig to the user's home directory
-      3. Installs VS Code extensions and configures the integrated terminal
-      4. Sets Chrome as default browser, unpins Edge from taskbar
-      5. Quiets Windows notifications, disables suggested content / ads
-      6. Configures power plan, Windows Update active hours
-      7. Creates team shortcuts, a desktop README, and a per-team helper script
-         (finalize-team-N.ps1) that clones the repo and sets the upstream remote
+      1.  Installs core software (Git, Python, VS Code, Chrome, GitHub Desktop) via winget
+      2.  Writes a chapter-standard .gitconfig to the user's home directory
+      3.  Installs VS Code extensions and configures user settings
+      4.  Sets Chrome as default browser, unpins Edge from taskbar
+      5.  Quiets Windows notifications, disables suggested content / ads
+      6.  Configures power plan, Windows Update active hours
+      7.  Creates the team's repo folder, app shortcuts, and team shortcuts on the desktop
+      8.  Launches GitHub Desktop and pauses for the user to authenticate and clone the fork
+      9.  Configures the cloned repo: upstream remote, Python venv,
+          pybricks + pybricksdev packages, VS Code workspace settings
 
     What it does NOT do (these are interactive, do them manually after):
-      - Sign in to Chrome with the team email
-      - Set up GitHub authentication (HTTPS credential manager or SSH key)
-      - Run the finalize-team-N.ps1 helper to clone the repo and set upstream
-        (this is interactive because it triggers the browser-based GitHub login)
+      - Sign in to Chrome with the team Gmail (Chrome requires a Google account;
+        outlook.com teams skip this step)
+      - Set Chrome as default browser
       - Install the Pybricks firmware on the SPIKE Prime hub
       - Pin shortcuts to the taskbar (Microsoft removed scripted pinning;
         right-click each desktop shortcut and choose "Pin to taskbar")
+
+    NEW TEAM SUPPORT:
+      If the team number is not in the $KnownTeams table, the script will
+      prompt for the team's email, display name, and GitHub username. No
+      script edit needed to set up a new team. You can optionally add the
+      team to $KnownTeams afterward so it appears in the menu next time.
 
 .NOTES
     Author:   Steven Erat with Claude (Bolton Robotics chapter)
@@ -47,49 +54,79 @@ param(
     [string]$TeamNumber
 )
 
-# Known chapter teams. Each entry has a team name (or $null if unnamed) and
-# the team's current email address. Email may be @outlook.com or @gmail.com
-# depending on what we were able to provision; update here when emails change.
+# Known chapter teams. To add a team to the menu, add an entry here.
+# Otherwise, enter the team number at the prompt and the script will
+# collect the team's email, name, and GitHub username interactively.
 $KnownTeams = @{
-    "18300" = @{ Name = $null;             Email = "fss.fll.18300@outlook.com" }
-    "19991" = @{ Name = $null;             Email = "fss.fll.19991@outlook.com" }
+    "18300" = @{ Name = "";                Email = "fss.fll.18300@outlook.com" }
+    "19991" = @{ Name = "";                Email = "fss.fll.19991@outlook.com" }
     "27041" = @{ Name = "Thought Process"; Email = "fss.fll.27041@gmail.com"   }
-    "27042" = @{ Name = $null;             Email = "fss.fll.27042@gmail.com"   }
-    "62070" = @{ Name = $null;             Email = "fss.fll.62070@outlook.com" }
+    "27042" = @{ Name = "";                Email = "fss.fll.27042@gmail.com"   }
+    "62070" = @{ Name = "";                Email = "fss.fll.62070@outlook.com" }
 }
 
-# If no team number was passed, show the menu and prompt
+# Show menu if no team number was passed on the command line
 if (-not $TeamNumber) {
     Write-Host ""
-    Write-Host "Bolton Robotics FLL - known teams:" -ForegroundColor Cyan
+    Write-Host "Bolton Robotics FLL -- known teams:" -ForegroundColor Cyan
     foreach ($t in $KnownTeams.Keys | Sort-Object) {
         $label = if ($KnownTeams[$t].Name) { $KnownTeams[$t].Name } else { "(unnamed)" }
         Write-Host "  $t  $label"
     }
+    Write-Host "  (or enter any other 5-digit number for a new team)"
     Write-Host ""
     $TeamNumber = Read-Host "Enter team number for this laptop"
 }
 
-# Validate
+# If team is unknown, collect details interactively
 if (-not $KnownTeams.ContainsKey($TeamNumber)) {
-    Write-Error "Team number '$TeamNumber' is not in the known teams list. Edit `$KnownTeams in this script if this is a new team."
-    exit 1
+    Write-Host ""
+    Write-Host "Team $TeamNumber is NOT in the known teams list." -ForegroundColor Yellow
+    Write-Host "This will set up the laptop as a NEW team." -ForegroundColor Yellow
+    Write-Host "(If you meant an existing team, this is a good moment to check for a typo.)" -ForegroundColor Yellow
+    $confirm = Read-Host "Continue setup for new team $TeamNumber? (Y/n)"
+    if ($confirm -and $confirm -notmatch '^[Yy]') {
+        Write-Host "Cancelled. Run the script again with the correct team number." -ForegroundColor Red
+        exit 1
+    }
+
+    Write-Host ""
+    Write-Host "Enter team email." -ForegroundColor Cyan
+    Write-Host "Chapter standard format examples (do not press Enter to accept -- type the actual email):" -ForegroundColor Cyan
+    Write-Host "  fss.fll.$TeamNumber@gmail.com" -ForegroundColor Gray
+    Write-Host "  fss.fll.$TeamNumber@outlook.com" -ForegroundColor Gray
+    $newEmail = Read-Host "Team email"
+    while (-not $newEmail -or $newEmail -notmatch '@') {
+        Write-Warning "Email is required and must contain '@'."
+        $newEmail = Read-Host "Team email"
+    }
+
+    Write-Host ""
+    $newName = Read-Host "Team display name (optional; press Enter to skip)"
+
+    Write-Host ""
+    $defaultGitHubUser = "fssfll$TeamNumber"
+    $newGitHubUser = Read-Host "GitHub username (press Enter for '$defaultGitHubUser')"
+    if (-not $newGitHubUser) { $newGitHubUser = $defaultGitHubUser }
+
+    # Stash into the same structure used for known teams
+    $KnownTeams[$TeamNumber] = @{
+        Name       = $newName
+        Email      = $newEmail
+        GitHubUser = $newGitHubUser
+    }
 }
 
-# Resolve team name (use known name if set, otherwise default to chapter convention)
-$TeamName = if ($KnownTeams[$TeamNumber].Name) {
-    $KnownTeams[$TeamNumber].Name
-} else {
-    "Bolton Robotics Team $TeamNumber"
-}
+# Resolve team values
+$teamData    = $KnownTeams[$TeamNumber]
+$TeamName    = if ($teamData.Name) { $teamData.Name } else { "Bolton Robotics Team $TeamNumber" }
+$TeamEmail   = $teamData.Email
+$GitHubUser  = if ($teamData.GitHubUser) { $teamData.GitHubUser } else { "fssfll$TeamNumber" }
 
-# Derived team-specific values
-$TeamEmail     = $KnownTeams[$TeamNumber].Email          # @gmail.com or @outlook.com per team
-$GitUserName   = "Bolton Robotics FLL Team $TeamNumber"  # Shows up in commit history
-$GitUserEmail  = $TeamEmail                              # Same as the team email
-$GitHubUser    = "fssfll$TeamNumber"                     # Team's GitHub username (convention)
-$ForkUrl       = "https://github.com/$GitHubUser/spike_basecode.git"
-$UpstreamUrl   = "https://github.com/stevenerat/spike_basecode.git"
+$GitUserName  = "Bolton Robotics FLL Team $TeamNumber"  # Shows up in commit history
+$GitUserEmail = $TeamEmail                              # Per-team email (gmail or outlook)
+$ForkUrl      = "https://github.com/$GitHubUser/spike_basecode.git"
+$UpstreamUrl  = "https://github.com/stevenerat/spike_basecode.git"
 
 # Local paths
 $ReposRoot     = "$env:USERPROFILE\repos"
@@ -115,7 +152,9 @@ if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adm
 
 Write-Host ""
 Write-Host "===============================================================" -ForegroundColor Cyan
-Write-Host " FLL Laptop Setup - Team $TeamNumber ($TeamName)" -ForegroundColor Cyan
+Write-Host " FLL Laptop Setup -- Team $TeamNumber ($TeamName)" -ForegroundColor Cyan
+Write-Host " Email:  $TeamEmail" -ForegroundColor Cyan
+Write-Host " GitHub: $GitHubUser" -ForegroundColor Cyan
 Write-Host "===============================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -123,9 +162,8 @@ Write-Host ""
 # 1. SOFTWARE INSTALLATION VIA WINGET
 # =============================================================================
 
-Write-Host "[1/7] Installing core software via winget..." -ForegroundColor Yellow
+Write-Host "[1/9] Installing core software via winget..." -ForegroundColor Yellow
 
-# winget package IDs (exact, version-pinned where it matters)
 $packages = @(
     @{ Id = "Git.Git";                       Name = "Git for Windows" },
     @{ Id = "Python.Python.3.12";            Name = "Python 3.12" },
@@ -154,19 +192,19 @@ Write-Host ""
 # 2. GIT CONFIGURATION (.gitconfig)
 # =============================================================================
 
-Write-Host "[2/7] Writing chapter-standard .gitconfig..." -ForegroundColor Yellow
+Write-Host "[2/9] Writing chapter-standard .gitconfig..." -ForegroundColor Yellow
 
 # Adapted from Steve's Mac .gitconfig with Windows-specific adjustments:
 #   - core.autocrlf changed from "input" to "true" (Windows line-ending convention)
 #   - filter "lfs" section removed (Git LFS not installed; chapter repo doesn't use it)
 #   - Added init.defaultBranch, pull.rebase, credential.helper
 #
-# Re-running this script OVERWRITES the .gitconfig file - any manual edits will be lost.
+# Re-running this script OVERWRITES the .gitconfig file -- any manual edits will be lost.
 
 $gitConfigContent = @"
-# ~/.gitconfig - FLL chapter laptop
+# ~/.gitconfig -- FLL chapter laptop
 # Adapted from Steve's Mac .gitconfig with Windows-specific adjustments.
-# Generated by setup-fll-laptop.ps1 - re-running the script overwrites this file.
+# Generated by setup-fll-laptop.ps1 -- re-running the script overwrites this file.
 
 [user]
     name = $GitUserName
@@ -234,33 +272,37 @@ Write-Host "  Configured for $GitUserName <$GitUserEmail>." -ForegroundColor Gre
 Write-Host ""
 
 # =============================================================================
-# 3. VS CODE EXTENSIONS AND SETTINGS
+# 3. VS CODE EXTENSIONS AND USER SETTINGS
 # =============================================================================
 
-Write-Host "[3/7] Installing VS Code extensions and configuring settings..." -ForegroundColor Yellow
+Write-Host "[3/9] Installing VS Code extensions and configuring user settings..." -ForegroundColor Yellow
 
+# Note: ms-vscode.powershell intentionally NOT included.
+# Steve is the only chapter coach who edits PowerShell, and he's on a Mac.
+# The extension also stalled during install on a slow network during the
+# 5-laptop run -- reliability risk with zero educational value.
 $vscodeExtensions = @(
     "ms-python.python",
     "ms-python.vscode-pylance",
-    "eamodio.gitlens",
-    "ms-vscode.powershell"
-    # Add more as needed
+    "eamodio.gitlens"
 )
 
 foreach ($ext in $vscodeExtensions) {
     Write-Host "  Installing extension: $ext" -ForegroundColor Gray
-    code --install-extension $ext --force
+    code --install-extension $ext --force | Out-Null
 }
 
-# Configure VS Code user settings - make Git Bash the default terminal
+# Configure VS Code USER settings (apply to all workspaces).
+# Workspace settings (per-repo, including the venv interpreter) are written
+# in Section 9 after the repo is cloned.
 $vscodeSettingsDir  = "$env:APPDATA\Code\User"
 $vscodeSettingsPath = "$vscodeSettingsDir\settings.json"
 
 if (-not (Test-Path $vscodeSettingsDir)) {
-    New-Item -ItemType Directory -Path $vscodeSettingsDir -Force
+    New-Item -ItemType Directory -Path $vscodeSettingsDir -Force | Out-Null
 }
 
-$vscodeSettings = @{
+$vscodeSettings = [ordered]@{
     "terminal.integrated.defaultProfile.windows" = "Git Bash"
     "editor.formatOnSave"                        = $true
     "files.trimTrailingWhitespace"               = $true
@@ -280,7 +322,7 @@ Write-Host ""
 # 4. BROWSER AND TASKBAR CLEANUP
 # =============================================================================
 
-Write-Host "[4/7] Configuring browser defaults and cleaning up taskbar..." -ForegroundColor Yellow
+Write-Host "[4/9] Configuring browser defaults and cleaning up taskbar..." -ForegroundColor Yellow
 
 # Chrome as default browser cannot be set silently in modern Windows without
 # admin SetUserFTA tooling. We'll prompt the user instead.
@@ -289,7 +331,6 @@ Write-Host "        After this script finishes, open Settings > Apps > Default a
 Write-Host "        > Google Chrome > Set default." -ForegroundColor Cyan
 
 # Unpin Edge from taskbar (works on Windows 11)
-# This uses a registry-based approach since Microsoft has removed the COM verb
 try {
     $edgeShortcut = "$env:APPDATA\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\Microsoft Edge.lnk"
     if (Test-Path $edgeShortcut) {
@@ -304,12 +345,12 @@ Write-Host "  Browser/taskbar cleanup complete." -ForegroundColor Green
 Write-Host ""
 
 # =============================================================================
-# 5. QUIET WINDOWS - NOTIFICATIONS, ADS, SUGGESTED CONTENT
+# 5. QUIET WINDOWS -- NOTIFICATIONS, ADS, SUGGESTED CONTENT
 # =============================================================================
 
-Write-Host "[5/7] Quieting Windows notifications and ads..." -ForegroundColor Yellow
+Write-Host "[5/9] Quieting Windows notifications and ads..." -ForegroundColor Yellow
 
-# Disable "suggested content" in Settings app
+# Disable "suggested content" in Settings app and Start menu
 $contentDeliveryPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
 $suggestedKeys = @(
     "SubscribedContent-338388Enabled",   # Start menu suggestions
@@ -325,7 +366,7 @@ foreach ($key in $suggestedKeys) {
 
 # Disable web search results in Start menu
 $searchPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search"
-if (-not (Test-Path $searchPath)) { New-Item -Path $searchPath -Force }
+if (-not (Test-Path $searchPath)) { New-Item -Path $searchPath -Force | Out-Null }
 Set-ItemProperty -Path $searchPath -Name "BingSearchEnabled" -Value 0 -Type DWord -Force
 Set-ItemProperty -Path $searchPath -Name "CortanaConsent"    -Value 0 -Type DWord -Force
 
@@ -333,9 +374,9 @@ Set-ItemProperty -Path $searchPath -Name "CortanaConsent"    -Value 0 -Type DWor
 Set-ItemProperty -Path $contentDeliveryPath -Name "RotatingLockScreenEnabled" -Value 0 -Type DWord -Force
 Set-ItemProperty -Path $contentDeliveryPath -Name "RotatingLockScreenOverlayEnabled" -Value 0 -Type DWord -Force
 
-# Disable OneDrive auto-sync prompts (does not uninstall OneDrive, just stops the nagging)
+# Disable OneDrive auto-sync prompts (does not uninstall OneDrive)
 $oneDrivePath = "HKCU:\Software\Microsoft\OneDrive"
-if (-not (Test-Path $oneDrivePath)) { New-Item -Path $oneDrivePath -Force }
+if (-not (Test-Path $oneDrivePath)) { New-Item -Path $oneDrivePath -Force | Out-Null }
 Set-ItemProperty -Path $oneDrivePath -Name "DisablePersonalSync" -Value 1 -Type DWord -Force
 
 Write-Host "  Windows quieted." -ForegroundColor Green
@@ -345,16 +386,16 @@ Write-Host ""
 # 6. POWER PLAN AND WINDOWS UPDATE
 # =============================================================================
 
-Write-Host "[6/7] Configuring power plan and Windows Update..." -ForegroundColor Yellow
+Write-Host "[6/9] Configuring power plan and Windows Update..." -ForegroundColor Yellow
 
-# Set sleep timeout to 60 minutes when plugged in (default is often 10-15)
+# Power plan: don't sleep aggressively while plugged in at meetings
 powercfg /change standby-timeout-ac 60
 powercfg /change monitor-timeout-ac 30
 powercfg /change disk-timeout-ac    0      # Never spin down disk on AC
 
-# Set Windows Update active hours: 8 AM to 8 PM (covers all reasonable meeting times)
+# Windows Update active hours: 8 AM to 8 PM (covers all reasonable meeting times)
 $wuPath = "HKLM:\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings"
-if (-not (Test-Path $wuPath)) { New-Item -Path $wuPath -Force }
+if (-not (Test-Path $wuPath)) { New-Item -Path $wuPath -Force | Out-Null }
 Set-ItemProperty -Path $wuPath -Name "ActiveHoursStart" -Value 8  -Type DWord -Force
 Set-ItemProperty -Path $wuPath -Name "ActiveHoursEnd"   -Value 20 -Type DWord -Force
 
@@ -365,11 +406,11 @@ Write-Host ""
 # 7. REPO FOLDER, DESKTOP SHORTCUTS, README
 # =============================================================================
 
-Write-Host "[7/7] Creating repo folder and desktop shortcuts..." -ForegroundColor Yellow
+Write-Host "[7/9] Creating repo folder and desktop shortcuts..." -ForegroundColor Yellow
 
-# Create repo parent folder
+# Create repo parent folder (clone will land here in Section 8)
 if (-not (Test-Path $ReposRoot)) {
-    New-Item -ItemType Directory -Path $ReposRoot -Force
+    New-Item -ItemType Directory -Path $ReposRoot -Force | Out-Null
 }
 
 # Helper function to create .lnk shortcuts
@@ -390,33 +431,53 @@ function New-Shortcut {
     $shortcut.Save()
 }
 
-# -----------------------------------------------------------------------------
-# Generic OS shortcuts (no installer creates these)
-# -----------------------------------------------------------------------------
-# Chrome, GitHub Desktop, and VS Code are intentionally NOT created here -
-# their installers already create desktop shortcuts. The team-specific
-# "Open Team N Code" shortcut below replaces the need for a generic VS Code
-# shortcut.
+# General app shortcuts ------------------------------------------------------
 
-# Locate VS Code for the team-specific shortcut below (user install, then system install)
+$chromeExe = "${env:ProgramFiles}\Google\Chrome\Application\chrome.exe"
+if (-not (Test-Path $chromeExe)) {
+    $chromeExe = "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe"
+}
+if (Test-Path $chromeExe) {
+    New-Shortcut -Path "$DesktopPath\Google Chrome.lnk" -Target $chromeExe
+    Write-Host "  Created shortcut: Google Chrome" -ForegroundColor Gray
+} else {
+    Write-Warning "  Chrome executable not found; skipping Chrome shortcut."
+}
+
+# GitHub Desktop installs per-user under LOCALAPPDATA
+$githubDesktopExe = "$env:LOCALAPPDATA\GitHubDesktop\GitHubDesktop.exe"
+if (-not (Test-Path $githubDesktopExe)) {
+    $candidate = Get-ChildItem "$env:LOCALAPPDATA\GitHubDesktop" -Filter "GitHubDesktop.exe" `
+                    -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($candidate) { $githubDesktopExe = $candidate.FullName }
+}
+if (Test-Path $githubDesktopExe) {
+    New-Shortcut -Path "$DesktopPath\GitHub Desktop.lnk" -Target $githubDesktopExe
+    Write-Host "  Created shortcut: GitHub Desktop" -ForegroundColor Gray
+} else {
+    Write-Warning "  GitHub Desktop executable not found; skipping shortcut."
+}
+
+# VS Code shortcut (general)
 $vscodeExe = "$env:LOCALAPPDATA\Programs\Microsoft VS Code\Code.exe"
 if (-not (Test-Path $vscodeExe)) {
     $vscodeExe = "${env:ProgramFiles}\Microsoft VS Code\Code.exe"
 }
+if (Test-Path $vscodeExe) {
+    New-Shortcut -Path "$DesktopPath\Visual Studio Code.lnk" -Target $vscodeExe
+    Write-Host "  Created shortcut: Visual Studio Code" -ForegroundColor Gray
+} else {
+    Write-Warning "  VS Code executable not found; skipping general VS Code shortcut."
+}
 
-# File Explorer - built-in, always present
+# File Explorer and Command Prompt -- built-in, always present
 New-Shortcut -Path "$DesktopPath\File Explorer.lnk" -Target "explorer.exe"
 Write-Host "  Created shortcut: File Explorer" -ForegroundColor Gray
-
-# Command Prompt - built-in, always present
 New-Shortcut -Path "$DesktopPath\Command Prompt.lnk" -Target "$env:SystemRoot\System32\cmd.exe"
 Write-Host "  Created shortcut: Command Prompt" -ForegroundColor Gray
 
-# -----------------------------------------------------------------------------
-# Team-specific workflow shortcuts
-# -----------------------------------------------------------------------------
+# Team-specific workflow shortcuts ------------------------------------------
 
-# Shortcut: Open Team Code in VS Code (pre-loaded with the repo folder)
 if (Test-Path $vscodeExe) {
     New-Shortcut `
         -Path "$DesktopPath\Open Team $TeamNumber Code.lnk" `
@@ -426,14 +487,12 @@ if (Test-Path $vscodeExe) {
     Write-Host "  Created shortcut: Open Team $TeamNumber Code" -ForegroundColor Gray
 }
 
-# Shortcut: Team's repo folder (File Explorer)
 New-Shortcut `
     -Path "$DesktopPath\Team $TeamNumber Repo Folder.lnk" `
     -Target "explorer.exe" `
     -Arguments "`"$RepoPath`""
 Write-Host "  Created shortcut: Team $TeamNumber Repo Folder" -ForegroundColor Gray
 
-# Shortcut: Git Bash in repo folder
 $gitBashExe = "${env:ProgramFiles}\Git\git-bash.exe"
 if (Test-Path $gitBashExe) {
     New-Shortcut `
@@ -443,75 +502,7 @@ if (Test-Path $gitBashExe) {
     Write-Host "  Created shortcut: Git Bash (Team $TeamNumber)" -ForegroundColor Gray
 }
 
-# -----------------------------------------------------------------------------
-# Helper script: finalize-team-N.ps1
-# -----------------------------------------------------------------------------
-# Writes a separate, per-team script to the desktop that performs the post-setup
-# git work (clone, set upstream). Avoids copy/paste errors from the PowerShell
-# console. Safe to re-run.
-
-$finalizeScriptName = "finalize-team-$TeamNumber.ps1"
-$finalizeScriptPath = "$DesktopPath\$finalizeScriptName"
-
-# In the here-string below:
-#   $RepoPath / $ForkUrl / $UpstreamUrl  expand NOW (bake values into the file)
-#   `$Variable                            stays literal (runs in the generated script)
-$finalizeScript = @"
-# $finalizeScriptName
-# Auto-generated by setup-fll-laptop.ps1 on $(Get-Date -Format 'yyyy-MM-dd HH:mm')
-# Clones the team's spike_basecode fork and configures the upstream remote.
-# Idempotent: safe to re-run.
-
-`$RepoPath    = '$RepoPath'
-`$ForkUrl     = '$ForkUrl'
-`$UpstreamUrl = '$UpstreamUrl'
-
-Write-Host ''
-Write-Host '===============================================================' -ForegroundColor Cyan
-Write-Host ' Team $TeamNumber - clone repo and configure remotes' -ForegroundColor Cyan
-Write-Host '===============================================================' -ForegroundColor Cyan
-Write-Host ''
-
-# Step 1: Clone if not already present
-if (-not (Test-Path "`$RepoPath\.git")) {
-    Write-Host 'Cloning team fork from GitHub...' -ForegroundColor Yellow
-    Write-Host 'If prompted, complete the GitHub login flow in your browser.' -ForegroundColor Cyan
-    git clone `$ForkUrl `$RepoPath
-    if (`$LASTEXITCODE -ne 0) {
-        Write-Error 'Clone failed. Resolve the issue and re-run this script.'
-        exit 1
-    }
-} else {
-    Write-Host "Repo already cloned at `$RepoPath" -ForegroundColor Green
-}
-
-# Step 2: cd to repo so subsequent git commands have the right context
-Set-Location `$RepoPath
-
-# Step 3: Add upstream remote if not already configured
-`$existingUpstream = git remote get-url upstream 2>`$null
-if (`$existingUpstream) {
-    Write-Host "Upstream remote already configured: `$existingUpstream" -ForegroundColor Green
-} else {
-    Write-Host 'Adding upstream remote...' -ForegroundColor Yellow
-    git remote add upstream `$UpstreamUrl
-    Write-Host "Upstream remote added: `$UpstreamUrl" -ForegroundColor Green
-}
-
-# Step 4: Verify
-Write-Host ''
-Write-Host 'Configured remotes:' -ForegroundColor Cyan
-git remote -v
-Write-Host ''
-Write-Host 'Done. Open the repo in VS Code via the desktop shortcut.' -ForegroundColor Green
-"@
-
-Set-Content -Path $finalizeScriptPath -Value $finalizeScript -Encoding UTF8
-Write-Host "  Created helper script: $finalizeScriptName" -ForegroundColor Gray
-
-# -----------------------------------------------------------------------------
-# Desktop README
-# -----------------------------------------------------------------------------
+# Desktop README -- GitHub Desktop oriented, not git CLI -------------------
 
 $readmeContent = @"
 TEAM $TeamNumber - $TeamName
@@ -520,34 +511,41 @@ TEAM $TeamNumber - $TeamName
 YOUR CODE LIVES IN:
   $RepoPath
 
-EVERYDAY COMMANDS (run from Git Bash in the repo folder):
+EVERYDAY WORKFLOW (use GitHub Desktop):
 
-  Get latest code from GitHub:
-    git pull
+  Get the latest code from your team's repo:
+    1. Open GitHub Desktop
+    2. Click "Fetch origin" (top bar)
+    3. Click "Pull origin" if updates appear
 
   Save your changes:
-    git add .
-    git commit -m "describe what you changed"
-    git push
+    1. Open GitHub Desktop
+    2. Review changed files in the "Changes" tab
+    3. Type a summary message at the bottom-left
+    4. Click "Commit to main"
+    5. Click "Push origin" in the top bar
+
+  Pull chapter updates (when Steve announces changes):
+    1. Go to https://github.com/$GitHubUser/spike_basecode
+    2. If GitHub shows "This branch is N commits behind", click "Sync fork"
+    3. In GitHub Desktop, click "Fetch origin" then "Pull origin"
 
   Run code on the SPIKE hub:
-    python -m pybricksdev run ble --name <hub-name> main.py
-
-GUI ALTERNATIVE:
-  GitHub Desktop is installed for visual git operations
-  (commits, pulls, pushes, branch switching) without the command line.
+    Open Git Bash (or the VS Code terminal) in the repo folder, then run:
+      python -m pybricksdev run ble --name <hub-name> main.py
 
 QUESTIONS?
   Talk to your coach, or contact Steve.
-
-YOUR TEAM'S EMAIL:
-  $TeamEmail
 
 YOUR TEAM'S GITHUB:
   https://github.com/$GitHubUser/spike_basecode
 
 CHAPTER UPSTREAM (where updates come from):
   $UpstreamUrl
+
+NOTE FOR TECHNICAL COACHES:
+  Git CLI works too. The repo has scripts/sync-from-upstream.ps1 for
+  fetching chapter updates from PowerShell.
 "@
 
 Set-Content -Path "$DesktopPath\README - Team $TeamNumber.txt" -Value $readmeContent -Encoding UTF8
@@ -556,26 +554,156 @@ Write-Host "  Desktop shortcuts and README created." -ForegroundColor Green
 Write-Host ""
 
 # =============================================================================
+# 8. GITHUB DESKTOP AUTHENTICATION AND REPO CLONE (INTERACTIVE PAUSE)
+# =============================================================================
+
+Write-Host "[8/9] GitHub Desktop authentication and repository clone..." -ForegroundColor Yellow
+
+if (Test-Path "$RepoPath\.git") {
+    Write-Host "  Repository already cloned at $RepoPath -- skipping clone step." -ForegroundColor Gray
+} else {
+    if (Test-Path $githubDesktopExe) {
+        Start-Process $githubDesktopExe
+        Write-Host "  GitHub Desktop launched." -ForegroundColor Gray
+    } else {
+        Write-Warning "  GitHub Desktop executable not found -- launch it manually from the Start Menu."
+    }
+
+    Write-Host ""
+    Write-Host "  MANUAL STEPS in GitHub Desktop:" -ForegroundColor Cyan
+    Write-Host "    1. Sign in to GitHub (if not already signed in)." -ForegroundColor Cyan
+    Write-Host "       Use the team's GitHub account: $GitHubUser" -ForegroundColor Cyan
+    Write-Host "    2. File > Clone Repository > URL tab" -ForegroundColor Cyan
+    Write-Host "         URL:        $ForkUrl" -ForegroundColor Cyan
+    Write-Host "         Local path: $RepoPath" -ForegroundColor Cyan
+    Write-Host "       Click Clone." -ForegroundColor Cyan
+    Write-Host "    3. When asked 'How are you planning to use this fork?':" -ForegroundColor Cyan
+    Write-Host "         Select 'For my own purposes'." -ForegroundColor Cyan
+    Write-Host "         Do NOT select 'To contribute to the parent project'." -ForegroundColor Cyan
+    Write-Host "         (Team repos are downstream-only; chapter updates flow one direction.)" -ForegroundColor Cyan
+    Write-Host ""
+    Read-Host "  Press Enter after the clone is complete"
+
+    if (-not (Test-Path "$RepoPath\.git")) {
+        Write-Host ""
+        Write-Error "Clone not detected at $RepoPath."
+        Write-Host ""
+        Write-Host "If you'd rather clone from the command line, open Git Bash and run:" -ForegroundColor Yellow
+        Write-Host "  git clone $ForkUrl `"$RepoPath`"" -ForegroundColor Gray
+        Write-Host "Then re-run this script -- it is safe to re-run." -ForegroundColor Yellow
+        exit 1
+    }
+    Write-Host "  Clone detected at $RepoPath." -ForegroundColor Green
+}
+Write-Host ""
+
+# =============================================================================
+# 9. POST-CLONE REPO SETUP -- UPSTREAM, VENV, PACKAGES, WORKSPACE SETTINGS
+# =============================================================================
+
+Write-Host "[9/9] Configuring repo: upstream remote, Python venv, packages, VS Code workspace..." -ForegroundColor Yellow
+
+Push-Location $RepoPath
+try {
+    # 9a. Add upstream remote if not configured
+    #     (GitHub Desktop's "For my own purposes" choice does NOT configure upstream)
+    $existingRemotes = git remote
+    if ($existingRemotes -notcontains "upstream") {
+        git remote add upstream $UpstreamUrl
+        Write-Host "  Added upstream remote: $UpstreamUrl" -ForegroundColor Gray
+    } else {
+        Write-Host "  Upstream remote already configured -- skipping." -ForegroundColor Gray
+    }
+
+    # 9b. Create .venv if not present
+    $venvPython = "$RepoPath\.venv\Scripts\python.exe"
+    if (-not (Test-Path $venvPython)) {
+        Write-Host "  Creating Python virtual environment in .venv..." -ForegroundColor Gray
+        python -m venv .venv
+        if (-not (Test-Path $venvPython)) {
+            Write-Error "Failed to create .venv. Check that Python 3.12 is on PATH (try opening a new PowerShell window and re-running)."
+            exit 1
+        }
+    } else {
+        Write-Host "  Python venv already exists -- skipping creation." -ForegroundColor Gray
+    }
+
+    # 9c. Upgrade pip inside the venv
+    Write-Host "  Upgrading pip in .venv..." -ForegroundColor Gray
+    & $venvPython -m pip install --upgrade pip --quiet
+
+    # 9d. Install pybricks and pybricksdev by name (no requirements.txt;
+    #     these two packages are the canonical chapter dependencies)
+    Write-Host "  Installing pybricks and pybricksdev..." -ForegroundColor Gray
+    & $venvPython -m pip install pybricks pybricksdev --quiet
+    Write-Host "  Packages installed." -ForegroundColor Gray
+
+    # 9e. Write workspace .vscode/settings.json so VS Code auto-selects the venv
+    $workspaceSettingsDir  = "$RepoPath\.vscode"
+    $workspaceSettingsPath = "$workspaceSettingsDir\settings.json"
+    $venvPythonRelative    = ".venv\Scripts\python.exe"  # workspace-relative; ConvertTo-Json escapes backslashes
+
+    if (-not (Test-Path $workspaceSettingsDir)) {
+        New-Item -ItemType Directory -Path $workspaceSettingsDir -Force | Out-Null
+    }
+
+    if (Test-Path $workspaceSettingsPath) {
+        # Merge: parse existing JSON, set/overwrite our key, write back.
+        # Insurance against future repo PRs that add other workspace settings.
+        try {
+            $existingJson = Get-Content $workspaceSettingsPath -Raw | ConvertFrom-Json
+            $existingJson | Add-Member `
+                -NotePropertyName "python.defaultInterpreterPath" `
+                -NotePropertyValue $venvPythonRelative `
+                -Force
+            $existingJson | ConvertTo-Json -Depth 10 | Set-Content -Path $workspaceSettingsPath -Encoding UTF8
+            Write-Host "  Merged python.defaultInterpreterPath into existing .vscode/settings.json" -ForegroundColor Gray
+        } catch {
+            Write-Warning "  Could not parse existing .vscode/settings.json; leaving it untouched."
+            Write-Warning "  Set the interpreter manually in VS Code:"
+            Write-Warning "  Ctrl+Shift+P -> Python: Select Interpreter -> .venv"
+        }
+    } else {
+        $workspaceSettings = [ordered]@{
+            "python.defaultInterpreterPath" = $venvPythonRelative
+        }
+        $workspaceSettings | ConvertTo-Json -Depth 5 | Set-Content -Path $workspaceSettingsPath -Encoding UTF8
+        Write-Host "  Wrote .vscode/settings.json with Python interpreter path." -ForegroundColor Gray
+    }
+} finally {
+    Pop-Location
+}
+
+Write-Host "  Repo setup complete." -ForegroundColor Green
+Write-Host ""
+
+# =============================================================================
 # DONE
 # =============================================================================
 
 Write-Host "===============================================================" -ForegroundColor Cyan
-Write-Host " Setup complete for Team $TeamNumber" -ForegroundColor Cyan
+Write-Host " Setup complete for Team $TeamNumber ($TeamName)" -ForegroundColor Cyan
 Write-Host "===============================================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "REMAINING MANUAL STEPS:" -ForegroundColor Yellow
-Write-Host "  1. Open Chrome, sign in with $TeamEmail"
-Write-Host "     (Skip sign-in for outlook.com accounts - Chrome requires a Google account)"
-Write-Host "  2. Set Chrome as default browser (Settings > Apps > Default apps)"
-Write-Host "  3. Run the finalize script from the desktop to clone the repo"
-Write-Host "     and set up the upstream remote:"
-Write-Host "       & `"$finalizeScriptPath`""
-Write-Host "     (You'll be prompted to authenticate with GitHub via browser)"
-Write-Host "  4. Sign in to GitHub Desktop with the team's GitHub account"
-Write-Host "  5. Pin shortcuts to taskbar: right-click each desktop shortcut"
-Write-Host "     and choose `"Pin to taskbar`""
-Write-Host "  6. Verify: open the repo in VS Code via the desktop shortcut,"
-Write-Host "     run a test commit/push, and connect to a SPIKE hub."
+Write-Host "  1. Set Chrome as default browser:" -ForegroundColor White
+Write-Host "       Settings > Apps > Default apps > Google Chrome > Set default"
+Write-Host "  2. (Optional) Sign in to Chrome with $TeamEmail" -ForegroundColor White
+Write-Host "       Note: Chrome requires a Google account."
+Write-Host "       Outlook.com teams cannot sign in to Chrome -- skip this step."
+Write-Host "  3. Pin desktop shortcuts to the taskbar:" -ForegroundColor White
+Write-Host "       Right-click each shortcut on the desktop, choose 'Pin to taskbar'."
+Write-Host "  4. Launch VS Code via 'Open Team $TeamNumber Code' shortcut." -ForegroundColor White
+Write-Host "       Verify the venv shows in the bottom-right status bar"
+Write-Host "       (should display '.venv': Python 3.12.x). If it doesn't:"
+Write-Host "       Ctrl+Shift+P -> Python: Select Interpreter -> .venv"
+Write-Host "  5. Open menu.py in VS Code and confirm pybricks imports do not" -ForegroundColor White
+Write-Host "       trigger 'Import could not be resolved' errors. Some type-check"
+Write-Host "       warnings may remain depending on the repo's typing stubs;"
+Write-Host "       runtime behavior on the hub is what matters."
+Write-Host "  6. Connect to a SPIKE Prime hub and run a test program to confirm" -ForegroundColor White
+Write-Host "       the full pipeline:"
+Write-Host "         python -m pybricksdev run ble --name <hub-name> main.py"
 Write-Host ""
 Write-Host "If anything went wrong, the script is safe to re-run." -ForegroundColor Gray
 Write-Host ""

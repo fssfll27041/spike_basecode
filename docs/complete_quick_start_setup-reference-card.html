@@ -577,10 +577,12 @@
   </div>
 
   <p class="header-intro">
-    This guide walks you through setting up a modern robotics coding workspace on your computer from scratch.
+    This guide walks you through setting up a modern robotics coding workspace on your computer from scratch using MANUAL instructions.
     You will install a few free tools, download the team's shared code, and be ready to write and deploy programs to the robot.
     This is a one-time setup — once it's done, your everyday routine is just a few clicks.
-    A separate, shorter guide covers the student workflow for laptops where setup is already complete.
+    A separate, shorter guide covers the student workflow for laptops where setup is already complete.  
+    <br/><strong>NOTE:</strong> For easier setup, use this guide for automated scripts: 
+    <a href="https://github.com/stevenerat/spike_basecode/blob/main/scripts/laptop-provisioning-guide.md" target="_blank" rel="noopener">Laptop Provisioning Guide</a>
   </p>
 </header>
 
@@ -681,6 +683,7 @@
           <div class="step-how">Run in a terminal:</div>
           <div class="cmd-block">git clone https://github.com/fssfll/spike_basecode
 cd spike_basecode</div>
+          <div class="step-why"><strong style="color: red">The "spike_basecode" directory is the "root" of your repository</strong></div>
         </div>
       </div>
 
@@ -688,7 +691,7 @@ cd spike_basecode</div>
         <div class="step-index">5</div>
         <div>
           <div class="step-title">Create a Virtual Environment</div>
-          <div class="step-why">This creates a private, self-contained workspace for this project's tools — keeping your robotics setup completely separate from anything else on your computer and ensuring every coach's setup behaves identically.</div>
+          <div class="step-why">This creates a private, self-contained workspace for this project's tools — keeping your robotics setup completely separate from anything else on your computer and ensuring every coach's setup behaves identically. <strong style="color: red">Run from the root of your repository</strong></div>
           <div class="cmd-block">python -m venv .venv</div>
         </div>
       </div>
@@ -697,7 +700,7 @@ cd spike_basecode</div>
         <div class="step-index">6</div>
         <div>
           <div class="step-title">Activate the Virtual Environment</div>
-          <div class="step-why">Activating "steps into" your private workspace. Do this once each time you open a new terminal. Your terminal prompt will show <code>(.venv)</code> as confirmation.</div>
+          <div class="step-why">Activating "steps into" your private workspace. Do this once each time you open a new terminal. Your terminal prompt will show <code>(.venv)</code> as confirmation. <strong style="color: red">Run from the root of your repository</strong></div>
           <div class="cmd-block"># macOS / Linux
 source .venv/bin/activate
 
@@ -713,8 +716,8 @@ source .venv/bin/activate
         <div class="step-index">7</div>
         <div>
           <div class="step-title">Install Project Tools</div>
-          <div class="step-why">This installs everything the project depends on — including <code>pybricksdev</code>, the tool that sends your finished code to the robot over Bluetooth.</div>
-          <div class="cmd-block">pip install -r requirements.txt</div>
+          <div class="step-why">This installs everything the project depends on — including <code>pybricksdev</code>, the tool that sends your finished code to the robot over Bluetooth. <br/><strong style="color: red">Run from the root of your repository AFTER activating the virtual environment.</strong></div>
+          <div class="cmd-block">pip install pybricks pybricksdev</div>
         </div>
       </div>
 
