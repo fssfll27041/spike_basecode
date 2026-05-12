@@ -195,7 +195,11 @@ Write-Host ""
 Write-Host "[2/9] Writing chapter-standard .gitconfig..." -ForegroundColor Yellow
 
 # Adapted from Steve's Mac .gitconfig with Windows-specific adjustments:
-#   - core.autocrlf changed from "input" to "true" (Windows line-ending convention)
+#   - core.autocrlf set to "false" (the repo's .gitattributes drives EOL
+#     behavior; setting autocrlf alongside it causes phantom diffs and
+#     conflicting rules). The chapter repo's .gitattributes specifies
+#     `* text=auto eol=lf` plus `*.bat eol=crlf`, which is what we want
+#     on Windows.
 #   - filter "lfs" section removed (Git LFS not installed; chapter repo doesn't use it)
 #   - Added init.defaultBranch, pull.rebase, credential.helper
 #
@@ -241,7 +245,7 @@ $gitConfigContent = @"
 [core]
     editor = code --wait             # VS Code as default editor
     pager = less -FRSX               # Better pager (works in Git Bash)
-    autocrlf = true                  # Windows: CRLF in working tree, LF in repo
+    autocrlf = false                 # .gitattributes drives EOL behavior; don't double up
 
 [help]
     autocorrect = 20                 # Auto-run corrected commands after 2 sec
