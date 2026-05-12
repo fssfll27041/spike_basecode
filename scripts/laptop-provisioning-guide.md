@@ -170,17 +170,12 @@ Also worth doing at this point:
 ## Notes and gotchas
 
 **Account creation friction.** Gmail enforces a phone-number rate limit
-that blocks creating multiple accounts in succession; GitHub blocks
+that may block creating multiple accounts in succession; GitHub may block
 account creation from `@outlook.com` addresses. If you hit either, the
-chapter's workaround is to create a Google Workspace alias under
-`stevenerat.com`, use that alias for GitHub signup, and then switch the
-GitHub account's primary email to the team's Outlook address (keeping the
-alias as backup, which is load-bearing for account recovery). Talk to
-Steve before going down this path.
-
-**Outlook teams can't sign in to Chrome.** Chrome requires a Google
-account. Outlook teams just skip the Chrome sign-in step — everything else
-works the same.
+chapter's workaround is to create a GitHub account using a personal email 
+address TEMPORARILY, and then switch then later 
+GitHub account's primary email to the team's permanent (Outlook or Gmail) address 
+and then set that address as the primary email for GitHub. Then remove the personal address.  
 
 **The script is idempotent.** If anything fails partway through, re-running
 the script from the start is the recommended fix. Already-installed
