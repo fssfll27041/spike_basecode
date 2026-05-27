@@ -1,8 +1,12 @@
 {
   "version": "0.2.0",
   "configurations": [
+
+
+
+
     {
-      "name": "Run on BR-01",
+      "name": "Run on 18300-SandShade",
       "type": "debugpy",
       "noDebug": true,
       "request": "launch",
@@ -11,12 +15,12 @@
         "run",
         "ble",
         "--name",
-        "BR-01",
+        "18300-SandShade",
         "main.py"
       ]
     },
     {
-      "name": "Run on BR-02",
+      "name": "Run on BR-10",
       "type": "debugpy",
       "noDebug": true,
       "request": "launch",
@@ -25,7 +29,7 @@
         "run",
         "ble",
         "--name",
-        "BR-02",
+        "BR-10",
         "main.py"
       ]
     },
