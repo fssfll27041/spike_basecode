@@ -20,9 +20,25 @@ def mission_one(r: robot):
     print("Running Mission 1")
     # Your code goes here...
     # Sample Code: Run attachment motors and drive motors
-    r.robot.straight (500)
-    r.robot.turn(90)
-    r.robot.straight(500)
+    r.robot.straight (700)
+    r.robot.turn(-45)
+    r.robot.straight(80)
+    # r.lam.run_time (-500,1000)
+    # r.robot.straight(-50)
+    # r.lam.run_time (200,2000)
+
+    for i in range(3):
+        r.lam.run_time(-1000, 1000)
+        r.robot.straight(-50)
+        r.lam.run_time(1000,1000)
+        r.robot.straight(50)
+
+    r.robot.drive(-1000,20)
+
+
+
+
+
 
 
 ################################
