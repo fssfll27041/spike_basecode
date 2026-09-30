@@ -18,6 +18,9 @@ from pybricks.tools import wait, StopWatch
 
 def mission_six(r: robot):
     print("Running Mission 6")
+
+#    r.lam.run_time(-500, 500)
+
     
     # Drive forward, stopping next to the tree, then turn right and approach
     r.robot.straight(710)
