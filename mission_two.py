@@ -23,8 +23,10 @@ def mission_two(r: robot):
 
     r.robot.straight (670)
     r.robot.turn (90)
-    r.robot.straight (325)
-    r.robot.turn (-90)
+    r.robot.straight (350)
+    r.robot.turn (-20)
+    r.robot.turn (-70)
+    r.robot.straight (25)
     r.robot.straight (110)
     r.lam.run_time (1000, 3000)
     r.lam.run_time (-1000, 700)

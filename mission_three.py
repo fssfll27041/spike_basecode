@@ -21,6 +21,11 @@ def mission_three(r: robot):
     print("Running Mission 3")
     # Your code goes here...
 
+    # Remove the code below because we were just testing the arm.
+    r.robot.straight (330)
+    r.lam.run_time (1000,2000)
+    r.robot.straight (-230)
+
 ################################
 # KEEP THIS AT THE END OF THE FILE
 # This redirects to running main.
