@@ -2,28 +2,6 @@
 # mission_five.py
 #
 # Description:
-# [Describe What your mission does here]
-#
-# Author(s): [Your Name(s)]
-# Date: [YYYY-MM-DD]
-# Version: 1.0
-#
-# Dependencies:
-# - robot
-# - pybricks.tools
-#
-################################################################################
-from robot import robot
-from pybricks.tools import wait, StopWatch
-
-def mission_five(r: robot):
-    print("Running Mission 5")
-    # Your code goes here...
-
-################################################################################
-# mission_five.py
-#
-# Description:
 # drive forward, fast up (), drive back while dropping slowly.
 #
 # Author(s): [Your Name(s)]
@@ -53,7 +31,7 @@ def mission_five(r: robot):
     r.robot.straight(-120)
     r.robot.turn(90)
     r.robot.straight(900)
-    
+
 ################################
 # KEEP THIS AT THE END OF THE FILE
 # This redirects to running main.
