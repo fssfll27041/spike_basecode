@@ -2,9 +2,9 @@
 # mission_four.py
 #
 # Description:
-# [Describe What your mission does here]
+# traversal mission
 #
-# Author(s): [Your Name(s)]
+# Author(s): Andreu
 # Date: [YYYY-MM-DD]
 # Version: 1.0
 #

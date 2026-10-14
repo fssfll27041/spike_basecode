@@ -23,8 +23,8 @@ def mission_three(r: robot):
 
     # Remove the code below because we were just testing the arm.
     r.robot.straight (330)
-    r.lam.run_time (1000,2000)
-    r.robot.straight (-230)
+    r.lam.run_time (500,1000)
+    r.robot.straight (-330)
 
 ################################
 # KEEP THIS AT THE END OF THE FILE

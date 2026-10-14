@@ -1,10 +1,10 @@
 ################################################################################
 # mission_seven.py
 #
-# Description:
-# [Describe What your mission does here]
+# Description:Flip thw rock
 #
-# Author(s): [Your Name(s)]
+#
+# Author(s): Eleanor
 # Date: [YYYY-MM-DD]
 # Version: 1.0
 #
@@ -19,6 +19,10 @@ from pybricks.tools import wait, StopWatch
 def mission_seven(r: robot):
     print("Running Mission 7")
     # Your code goes here...
+
+    r.robot.straight(370)
+    r.lam.run_time(-500,1000)
+    r.robot.straight(-400)
 
 ################################
 # KEEP THIS AT THE END OF THE FILE
