@@ -21,10 +21,12 @@ def mission_three(r: robot):
     print("Running Mission 3")
     # Your code goes here...
 
-    r.robot.straight (900)
+    r.robot.straight (880)
     r.robot.turn (90)
-    r.lam.run_time (200,200)
-
+    r.lam.run_time (1000,600)
+    r.robot.straight (60)
+    r.lam.run_time (-1000,700)
+    r.robot.straight (-50)
 
 ################################
 # KEEP THIS AT THE END OF THE FILE
