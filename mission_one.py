@@ -21,10 +21,11 @@ def mission_one(r: robot):
     # Your code goes here...
 
     #preform the drone survey mission
-    r.robot.straight (700)
-    r.robot.turn (-45)
-    r.robot.straight (100)
-    r.robot.turn (-15)
+    r.robot.straight(800)
+    r.robot.straight(-900)
+
+
+
 
 
 
