@@ -19,18 +19,17 @@ from pybricks.tools import wait, StopWatch
 
 def mission_five(r: robot):
     print("Running Mission 5")
+    # Drive forward close to the mycellium
     r.robot.straight(820)
-    #r.robot.turn (-25)    #turn to get hook behind red bar
-
-    # r.lam.run_time(400, 1000)
-    # r.lam.run_time(-200, 2500)
-    #r.robot.settings(STRAIGHT_SPEED / 4, STRAIGHT_ACCEL / 4, TURN_RATE, TURN_ACCEL)
-    #r.robot.straight(-50) #back up to pull bar, SLOWLY
+    # Drive to the the ant test
     r.robot.turn(-90)
-
     r.robot.straight(260)
     r.robot.turn(135)
+
+    # approach slowly
+    r.robot.settings (STRAIGHT_SPEED / 4, STRAIGHT_ACCEL / 4, TURN_RATE, TURN_ACCEL)
     r.robot.straight(150)
+    r.robot.settings (STRAIGHT_SPEED, STRAIGHT_ACCEL, TURN_RATE, TURN_ACCEL)
     r.robot.straight(-120)
     r.robot.turn(90)
     r.robot.straight(900)
