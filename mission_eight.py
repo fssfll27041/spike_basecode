@@ -1,8 +1,8 @@
 ################################################################################
 # mission_eight.py
 #
-# Description:
-# a mission
+# Description: one flip for the rock 
+#
 #
 # Author(s): Eleanor
 # Date: [YYYY-MM-DD]
@@ -20,14 +20,13 @@ def mission_eight(r: robot):
     print("Running Mission 8")
     # Your code goes here...
 
-    r.robot.straight(650)
-    r.robot.turn(90)
-    r.robot.straight(600)
-    r.robot.settings(STRAIGHT_SPEED * 2, STRAIGHT_ACCEL * 2, TURN_RATE, TURN_ACCEL)
-    r.robot.drive(-800, 15)
-    wait(4000)
-    r.robot.stop()
-    r.robot.settings(STRAIGHT_SPEED, STRAIGHT_ACCEL, TURN_RATE, TURN_ACCEL)
+    r.robot.straight(425)
+    r.lam.run_time(-750, 1600, wait=False)
+    r.robot.drive(-200, 0)
+    wait(3000)
+
+
+
 
 
 

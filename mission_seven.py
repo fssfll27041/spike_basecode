@@ -1,10 +1,10 @@
 ################################################################################
 # mission_seven.py
 #
-# Description:Flip thw rock
+# Description: Flip the rock
 #
 #
-# Author(s): Eleanor
+# Author(s): Eleanor/Gerald
 # Date: [YYYY-MM-DD]
 # Version: 1.0
 #
@@ -18,10 +18,10 @@ from pybricks.tools import wait, StopWatch
 
 def mission_seven(r: robot):
     print("Running Mission 7")
-    # Your code goes here...
 
-    r.robot.straight(400)
-    r.lam.run_time(-750, 2000, wait=False)
+    #driving up to the rock, first flip
+    r.robot.straight(425)
+    r.lam.run_time(-750, 1600, wait=False)
     r.robot.drive(-200, 0)
     wait(1000)
 
@@ -31,8 +31,7 @@ def mission_seven(r: robot):
     
     r.robot.straight(150)
 
-    r.lam.run_time(-500, 500)
-    r.lam.run_time(-500, 2000, wait=False)
+    r.lam.run_time(-200, 1500, wait=False)
     r.robot.drive(-200, 0)
     wait(2000)
 

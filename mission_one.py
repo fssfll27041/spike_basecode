@@ -2,9 +2,9 @@
 # mission_one.py
 #
 # Description:
-# [Describe What your mission does here]
+# Lift the drone
 #
-# Author(s): [Your Name(s)]
+# Author(s):Gerald
 # Date: [YYYY-MM-DD]
 # Version: 1.0
 #
@@ -21,7 +21,7 @@ def mission_one(r: robot):
     # Your code goes here...
 
     #preform the drone survey mission
-    r.robot.straight(800)
+    r.robot.straight(710)
     r.robot.straight(-900)
 
 

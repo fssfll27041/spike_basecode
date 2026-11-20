@@ -30,21 +30,16 @@ def mission_two(r: robot):
     r.lam.run_time (-300, 500)
 
     # Turn to the tree and get the vine
-    r.robot.turn (-50)
+    r.robot.turn (-75)
     r.lam.run_time (300, 500)
-    r.robot.turn (-20)
+    
     r.robot.straight (150)
     r.lam.run_time (500, 1500)
     #r.lam.run_time (-2000, 1400)
     r.lam.run_time (-500, 1500)
 
     # Back up and lift the tree
-    r.robot.straight (-200)
-    r.lam.run_time (-700, 700)  # go down in prep
-    r.robot.turn(-30)
-    r.robot.straight (200)
-    r.lam.run_time (500, 1500)
-    r.lam.run_time (-1000, 700)
+  
 
     # Drive home
     r.robot.settings(STRAIGHT_SPEED * 2, STRAIGHT_ACCEL * 2, TURN_RATE, TURN_ACCEL)
